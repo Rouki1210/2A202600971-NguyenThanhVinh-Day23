@@ -1,3 +1,4 @@
 scenarios_path: data/sample/scenarios.jsonl
-checkpointer: memory
+checkpointer: postgres
+database_url: env:DATABASE_URL
 report_path: reports/lab_report.md

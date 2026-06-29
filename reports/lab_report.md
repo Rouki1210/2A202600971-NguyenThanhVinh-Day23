@@ -1,71 +1,4 @@
-"""Report generation helper.
-
-TODO(student): implement report rendering using MetricsReport data
-and the template in reports/lab_report_template.md.
-"""
-
-from __future__ import annotations
-
-from pathlib import Path
-
-from .metrics import MetricsReport, ScenarioMetric
-
-
-def _yes_no(value: bool) -> str:
-    return "yes" if value else "no"
-
-
-def _status(value: bool) -> str:
-    return "PASS" if value else "FAIL"
-
-
-def _format_percent(value: float) -> str:
-    return f"{value:.1%}"
-
-
-def _scenario_row(metric: ScenarioMetric) -> str:
-    errors = "; ".join(metric.errors) if metric.errors else "-"
-    return (
-        f"| {metric.scenario_id} "
-        f"| {metric.expected_route} "
-        f"| {metric.actual_route or '-'} "
-        f"| {_status(metric.success)} "
-        f"| {metric.nodes_visited} "
-        f"| {metric.retry_count} "
-        f"| {metric.interrupt_count} "
-        f"| {_yes_no(metric.approval_required)} "
-        f"| {_yes_no(metric.approval_observed)} "
-        f"| {errors} |"
-    )
-
-
-def render_report(metrics: MetricsReport) -> str:
-    """Render a complete lab report from metrics data.
-
-    TODO(student): Generate a report that includes:
-    1. Metrics summary table (total scenarios, success rate, retries, interrupts)
-    2. Per-scenario results table
-    3. Architecture explanation (your graph design, state schema, reducers)
-    4. Failure analysis (at least two failure modes you considered)
-    5. Improvement plan
-
-    Use reports/lab_report_template.md as your guide.
-
-    Return: formatted markdown string
-    """
-    scenario_rows = "\n".join(_scenario_row(item) for item in metrics.scenario_metrics)
-    failed = [item for item in metrics.scenario_metrics if not item.success]
-    failed_summary = (
-        "\n".join(
-            f"- {item.scenario_id}: expected `{item.expected_route}`, got "
-            f"`{item.actual_route or '-'}`; errors: {', '.join(item.errors) or 'none'}"
-            for item in failed
-        )
-        if failed
-        else "- No failed sample scenarios in the latest metrics run."
-    )
-
-    return f"""# Day 08 Lab Report
+# Day 08 Lab Report
 
 ## 1. Team / student
 
@@ -116,22 +49,28 @@ The state is intentionally small and serializable. Append-only fields use LangGr
 
 | Metric | Value |
 |---|---:|
-| Total scenarios | {metrics.total_scenarios} |
-| Success rate | {_format_percent(metrics.success_rate)} |
-| Average nodes visited | {metrics.avg_nodes_visited:.2f} |
-| Total retries | {metrics.total_retries} |
-| Total interrupts / approvals | {metrics.total_interrupts} |
-| Resume success | {_yes_no(metrics.resume_success)} |
+| Total scenarios | 7 |
+| Success rate | 100.0% |
+| Average nodes visited | 6.43 |
+| Total retries | 3 |
+| Total interrupts / approvals | 2 |
+| Resume success | no |
 
 ## 5. Scenario results
 
 | Scenario | Expected route | Actual route | Success | Nodes | Retries | Interrupts | Approval required | Approval observed | Errors |
 |---|---|---|---:|---:|---:|---:|---|---|---|
-{scenario_rows}
+| S01_simple | simple | simple | PASS | 4 | 0 | 0 | no | no | - |
+| S02_tool | tool | tool | PASS | 6 | 0 | 0 | no | no | - |
+| S03_missing | missing_info | missing_info | PASS | 4 | 0 | 0 | no | no | - |
+| S04_risky | risky | risky | PASS | 8 | 0 | 1 | yes | yes | - |
+| S05_error | error | error | PASS | 10 | 2 | 0 | no | no | Retry attempt 1 recorded for route 'error'; Retry attempt 2 recorded for route 'error' |
+| S06_delete | risky | risky | PASS | 8 | 0 | 1 | yes | yes | - |
+| S07_dead_letter | error | error | PASS | 5 | 1 | 0 | no | no | Retry attempt 1 recorded for route 'error' |
 
 Failed scenario notes:
 
-{failed_summary}
+- No failed sample scenarios in the latest metrics run.
 
 ## 6. Failure analysis
 
@@ -160,11 +99,3 @@ Implemented:
 ## 9. Improvement plan
 
 With one more day, the first production improvement would be stronger evaluation: replace the heuristic `"ERROR"` check with an LLM-as-judge or typed tool status object. After that, add structured tracing, richer approval metadata, and a small UI for approving or rejecting risky actions.
-"""
-
-
-def write_report(metrics: MetricsReport, output_path: str | Path) -> None:
-    """Write the rendered report to a file."""
-    path = Path(output_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_report(metrics), encoding="utf-8")

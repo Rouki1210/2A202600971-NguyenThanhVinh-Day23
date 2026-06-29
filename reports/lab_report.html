@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Day 08 LangGraph Lab Report</title>
+  <style>
+    :root {
+      --ink: #101113;
+      --muted: #63666d;
+      --paper: #f6f7f4;
+      --panel: #ffffff;
+      --line: #d9ded5;
+      --accent: #0f8f72;
+      --accent-dark: #09604f;
+      --accent-soft: #dff5ef;
+      --warn: #c76b2d;
+      --shadow: 0 24px 80px rgba(32, 42, 38, .12);
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(15, 143, 114, .12), transparent 28%),
+        linear-gradient(215deg, rgba(199, 107, 45, .12), transparent 28%),
+        var(--paper);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      min-height: 92dvh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
+      align-items: center;
+      gap: 48px;
+      padding: 56px 0 40px;
+      position: relative;
+    }
+
+    .hero:before {
+      content: "";
+      position: absolute;
+      inset: 14% auto auto 58%;
+      width: 360px;
+      aspect-ratio: 1;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(15, 143, 114, .22), transparent 68%);
+      filter: blur(4px);
+      animation: floatPulse 7s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid rgba(15, 143, 114, .22);
+      border-radius: 999px;
+      color: var(--accent-dark);
+      background: rgba(255, 255, 255, .68);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      animation: riseIn .7s ease both;
+    }
+
+    .eyebrow:before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 6px rgba(15, 143, 114, .12);
+    }
+
+    h1 {
+      margin: 24px 0 18px;
+      font-size: clamp(44px, 7vw, 96px);
+      line-height: .93;
+      letter-spacing: 0;
+      max-width: 820px;
+      animation: riseIn .85s .08s ease both;
+    }
+
+    .hero-copy {
+      max-width: 620px;
+      font-size: clamp(17px, 2vw, 22px);
+      color: var(--muted);
+      animation: riseIn .85s .16s ease both;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 30px;
+      animation: riseIn .85s .24s ease both;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 999px;
+      border: 1px solid var(--ink);
+      text-decoration: none;
+      font-weight: 750;
+      transition: transform .22s ease, box-shadow .22s ease, background .22s ease;
+    }
+
+    .button.primary {
+      color: #fff;
+      background: var(--ink);
+      box-shadow: 0 12px 34px rgba(16, 17, 19, .18);
+    }
+
+    .button.secondary {
+      color: var(--ink);
+      background: rgba(255, 255, 255, .62);
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 42px rgba(16, 17, 19, .16);
+    }
+
+    .button:active {
+      transform: translateY(0) scale(.98);
+    }
+
+    .score-card {
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(16, 17, 19, .08);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .78);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      animation: cardEnter .9s .18s cubic-bezier(.2, .8, .2, 1) both;
+    }
+
+    .score-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .score-label {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .score-value {
+      margin-top: 6px;
+      font-size: clamp(58px, 9vw, 104px);
+      line-height: .9;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .status-pill {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: var(--accent-soft);
+      color: var(--accent-dark);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .meter {
+      height: 12px;
+      border-radius: 999px;
+      background: #e3e8df;
+      overflow: hidden;
+    }
+
+    .meter span {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #38b797);
+      animation: fillMeter 1.2s .65s ease forwards;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .mini {
+      min-height: 98px;
+      padding: 14px;
+      border-radius: 14px;
+      background: #f8faf7;
+      border: 1px solid rgba(16, 17, 19, .07);
+      transition: transform .25s ease, border-color .25s ease;
+    }
+
+    .mini:hover {
+      transform: translateY(-4px);
+      border-color: rgba(15, 143, 114, .34);
+    }
+
+    .mini strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .mini span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    section {
+      padding: 70px 0;
+    }
+
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 28px;
+    }
+
+    .section-head h2 {
+      margin: 0 0 10px;
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(26px);
+      transition: opacity .7s ease, transform .7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .metric {
+      min-height: 154px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid rgba(16, 17, 19, .08);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric:after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 4px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .85s ease;
+    }
+
+    .metric.visible:after {
+      transform: scaleX(1);
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .metric .value {
+      margin-top: 20px;
+      font-size: 42px;
+      line-height: 1;
+      font-weight: 850;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .node {
+      position: relative;
+      border-radius: 16px;
+      padding: 16px;
+      min-height: 116px;
+      background: var(--panel);
+      border: 1px solid rgba(16, 17, 19, .08);
+      box-shadow: 0 8px 24px rgba(16, 17, 19, .06);
+      overflow: hidden;
+    }
+
+    .node:before {
+      content: "";
+      position: absolute;
+      left: 16px;
+      top: 16px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 0 rgba(15, 143, 114, .32);
+      animation: pulseNode 2.5s ease infinite;
+    }
+
+    .node strong {
+      display: block;
+      padding-left: 22px;
+      margin-bottom: 14px;
+      font-size: 16px;
+    }
+
+    .node span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid rgba(16, 17, 19, .08);
+      background: var(--panel);
+      box-shadow: 0 18px 60px rgba(16, 17, 19, .08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      text-align: left;
+      color: var(--muted);
+      background: #f1f4ef;
+      font-size: 12px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    th, td {
+      padding: 15px 16px;
+      border-bottom: 1px solid rgba(16, 17, 19, .07);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr {
+      transition: background .2s ease, transform .2s ease;
+    }
+
+    tbody tr:hover {
+      background: #fbfcfa;
+    }
+
+    .pass {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--accent-dark);
+      font-weight: 850;
+    }
+
+    .pass:before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .route-tag {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 5px 10px;
+      background: #eef3ea;
+      color: #26302b;
+      font-weight: 750;
+      font-size: 12px;
+    }
+
+    .bars {
+      display: grid;
+      gap: 12px;
+      padding: 22px;
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid rgba(16, 17, 19, .08);
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 150px 1fr 42px;
+      align-items: center;
+      gap: 14px;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e5eae2;
+    }
+
+    .bar-fill {
+      display: block;
+      height: 100%;
+      width: 0;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), #42b894);
+      transition: width 1.1s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .bar-fill.warn {
+      background: linear-gradient(90deg, var(--warn), #e9a35f);
+    }
+
+    .columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .panel {
+      border-radius: var(--radius);
+      background: var(--panel);
+      border: 1px solid rgba(16, 17, 19, .08);
+      padding: 24px;
+      box-shadow: 0 14px 46px rgba(16, 17, 19, .06);
+    }
+
+    .panel h3 {
+      margin: 0 0 12px;
+      font-size: 22px;
+    }
+
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .panel ul {
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel li {
+      position: relative;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    .panel li:before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .62em;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    footer {
+      padding: 46px 0 60px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes cardEnter {
+      from {
+        opacity: 0;
+        transform: translateY(24px) rotate(.8deg) scale(.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) rotate(0) scale(1);
+      }
+    }
+
+    @keyframes fillMeter {
+      to {
+        width: var(--target);
+      }
+    }
+
+    @keyframes pulseNode {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(15, 143, 114, .28);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(15, 143, 114, 0);
+      }
+    }
+
+    @keyframes floatPulse {
+      0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+      }
+      50% {
+        transform: translate3d(-20px, 18px, 0) scale(1.08);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .columns {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .flow {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        min-width: 860px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .page {
+        width: min(100% - 22px, 1180px);
+      }
+
+      .hero {
+        padding-top: 32px;
+      }
+
+      .mini-grid,
+      .metrics,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .bar-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .button {
+        width: 100%;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *:before, *:after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .001ms !important;
+      }
+
+      .reveal {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">LangGraph support agent lab</div>
+        <h1>Production workflow report with persistence evidence.</h1>
+        <p class="hero-copy">A complete view of routing, retry behavior, HITL approval, state schema, metrics, and recovery readiness for the Day 08 orchestration lab.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#scenarios">View scenario results</a>
+          <a class="button secondary" href="#persistence">Check persistence</a>
+        </div>
+      </div>
+
+      <aside class="score-card" aria-label="Metrics summary">
+        <div class="score-top">
+          <div>
+            <div class="score-label">Success rate</div>
+            <div class="score-value"><span class="count" data-target="100">0</span>%</div>
+          </div>
+          <div class="status-pill">Validated</div>
+        </div>
+        <div class="meter" aria-hidden="true"><span style="--target: 100%"></span></div>
+        <div class="mini-grid">
+          <div class="mini"><strong class="count" data-target="7">0</strong><span>Scenarios</span></div>
+          <div class="mini"><strong class="count" data-target="3">0</strong><span>Retries</span></div>
+          <div class="mini"><strong class="count" data-target="2">0</strong><span>Approvals</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section id="summary" class="reveal">
+      <div class="section-head">
+        <h2>Metrics snapshot</h2>
+        <p>All sample scenarios passed, including retry and approval paths.</p>
+      </div>
+      <div class="metrics" id="metricCards"></div>
+    </section>
+
+    <section id="architecture" class="reveal">
+      <div class="section-head">
+        <h2>Graph architecture</h2>
+        <p>The graph keeps routing decisions explicit and sends every path through finalize before END.</p>
+      </div>
+      <div class="flow">
+        <div class="node"><strong>intake</strong><span>Normalize the ticket query and create the first audit event.</span></div>
+        <div class="node"><strong>classify</strong><span>Use structured LLM output to choose simple, tool, missing info, risky, or error.</span></div>
+        <div class="node"><strong>tool</strong><span>Run mock support action or lookup and record tool results.</span></div>
+        <div class="node"><strong>evaluate</strong><span>Set success or needs_retry to control the bounded loop.</span></div>
+        <div class="node"><strong>approval</strong><span>Gate risky side effects before the tool path proceeds.</span></div>
+        <div class="node"><strong>finalize</strong><span>Close the workflow with a final audit event.</span></div>
+      </div>
+    </section>
+
+    <section id="scenarios" class="reveal">
+      <div class="section-head">
+        <h2>Scenario results</h2>
+        <p>Route accuracy, retries, approval observation, and error history from the latest metrics run.</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Scenario</th>
+              <th>Expected</th>
+              <th>Actual</th>
+              <th>Status</th>
+              <th>Nodes</th>
+              <th>Retries</th>
+              <th>Approvals</th>
+              <th>Errors</th>
+            </tr>
+          </thead>
+          <tbody id="scenarioRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="section-head">
+        <h2>Route behavior</h2>
+        <p>The larger bars show where retry and approval work happened.</p>
+      </div>
+      <div class="bars" id="routeBars"></div>
+    </section>
+
+    <section id="persistence" class="reveal">
+      <div class="section-head">
+        <h2>Persistence evidence</h2>
+        <p>Every run is bound to a stable thread id, and the checkpointer can replay history for that thread.</p>
+      </div>
+      <div class="columns">
+        <article class="panel">
+          <h3>Database configuration</h3>
+          <p>The lab config uses `checkpointer: postgres` and `database_url: env:DATABASE_URL`, so the Postgres connection string stays in `.env`.</p>
+          <ul>
+            <li>Thread ids are generated as `thread-&lt;scenario_id&gt;`.</li>
+            <li>`thread_config(thread_id)` binds graph invocations to checkpoint history.</li>
+            <li>`state_history_evidence(graph, thread_id)` summarizes replayable snapshots.</li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>Recovery story</h3>
+          <p>Postgres persistence supports process restart evidence because checkpoint state is stored outside memory.</p>
+          <ul>
+            <li>Start the Postgres service from `docker-compose.yml`.</li>
+            <li>Run scenarios with the same `DATABASE_URL` from `.env`.</li>
+            <li>Inspect state history using the original scenario thread id.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="reveal">
+      <div class="section-head">
+        <h2>Failure analysis</h2>
+        <p>The workflow avoids the two biggest production risks: unsafe side effects and infinite retries.</p>
+      </div>
+      <div class="columns">
+        <article class="panel">
+          <h3>Retry and dead letter</h3>
+          <p>Tool failures produce `evaluation_result = needs_retry`. The retry route checks `attempt < max_attempts`; exhausted runs go to `dead_letter` and still finalize cleanly.</p>
+        </article>
+        <article class="panel">
+          <h3>Risky action gate</h3>
+          <p>Refund, delete, cancellation, and email requests go through `risky_action` and `approval` before any tool side effect can proceed.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page">
+    Generated from `outputs/metrics.json` and `reports/lab_report.md`. Static HTML report for Day 08 LangGraph Agentic Orchestration.
+  </footer>
+
+  <script type="application/json" id="metrics-data">
+    {
+      "total_scenarios": 7,
+      "success_rate": 1.0,
+      "avg_nodes_visited": 6.428571428571429,
+      "total_retries": 3,
+      "total_interrupts": 2,
+      "resume_success": false,
+      "scenario_metrics": [
+        {"scenario_id":"S01_simple","success":true,"expected_route":"simple","actual_route":"simple","nodes_visited":4,"retry_count":0,"interrupt_count":0,"approval_required":false,"approval_observed":false,"latency_ms":0,"errors":[]},
+        {"scenario_id":"S02_tool","success":true,"expected_route":"tool","actual_route":"tool","nodes_visited":6,"retry_count":0,"interrupt_count":0,"approval_required":false,"approval_observed":false,"latency_ms":0,"errors":[]},
+        {"scenario_id":"S03_missing","success":true,"expected_route":"missing_info","actual_route":"missing_info","nodes_visited":4,"retry_count":0,"interrupt_count":0,"approval_required":false,"approval_observed":false,"latency_ms":0,"errors":[]},
+        {"scenario_id":"S04_risky","success":true,"expected_route":"risky","actual_route":"risky","nodes_visited":8,"retry_count":0,"interrupt_count":1,"approval_required":true,"approval_observed":true,"latency_ms":0,"errors":[]},
+        {"scenario_id":"S05_error","success":true,"expected_route":"error","actual_route":"error","nodes_visited":10,"retry_count":2,"interrupt_count":0,"approval_required":false,"approval_observed":false,"latency_ms":0,"errors":["Retry attempt 1 recorded for route 'error'","Retry attempt 2 recorded for route 'error'"]},
+        {"scenario_id":"S06_delete","success":true,"expected_route":"risky","actual_route":"risky","nodes_visited":8,"retry_count":0,"interrupt_count":1,"approval_required":true,"approval_observed":true,"latency_ms":0,"errors":[]},
+        {"scenario_id":"S07_dead_letter","success":true,"expected_route":"error","actual_route":"error","nodes_visited":5,"retry_count":1,"interrupt_count":0,"approval_required":false,"approval_observed":false,"latency_ms":0,"errors":["Retry attempt 1 recorded for route 'error'"]}
+      ]
+    }
+  </script>
+  <script>
+    const metrics = JSON.parse(document.getElementById("metrics-data").textContent);
+
+    const metricCards = [
+      ["Total scenarios", metrics.total_scenarios],
+      ["Success rate", `${Math.round(metrics.success_rate * 100)}%`],
+      ["Avg nodes visited", metrics.avg_nodes_visited.toFixed(2)],
+      ["Total retries", metrics.total_retries],
+      ["Approvals observed", metrics.total_interrupts],
+      ["Resume success", metrics.resume_success ? "yes" : "no"],
+      ["Routes covered", new Set(metrics.scenario_metrics.map((item) => item.actual_route)).size],
+      ["Failed scenarios", metrics.scenario_metrics.filter((item) => !item.success).length]
+    ];
+
+    document.getElementById("metricCards").innerHTML = metricCards.map(([label, value]) => `
+      <article class="metric reveal">
+        <div class="label">${label}</div>
+        <div class="value">${value}</div>
+      </article>
+    `).join("");
+
+    document.getElementById("scenarioRows").innerHTML = metrics.scenario_metrics.map((item) => `
+      <tr>
+        <td><strong>${item.scenario_id}</strong></td>
+        <td><span class="route-tag">${item.expected_route}</span></td>
+        <td><span class="route-tag">${item.actual_route}</span></td>
+        <td><span class="pass">${item.success ? "PASS" : "FAIL"}</span></td>
+        <td>${item.nodes_visited}</td>
+        <td>${item.retry_count}</td>
+        <td>${item.approval_observed ? "observed" : "none"}</td>
+        <td>${item.errors.length ? item.errors.join("<br>") : "-"}</td>
+      </tr>
+    `).join("");
+
+    const maxNodes = Math.max(...metrics.scenario_metrics.map((item) => item.nodes_visited));
+    document.getElementById("routeBars").innerHTML = metrics.scenario_metrics.map((item) => `
+      <div class="bar-row">
+        <span>${item.scenario_id}</span>
+        <div class="bar-track">
+          <span class="bar-fill ${item.retry_count ? "warn" : ""}" data-width="${(item.nodes_visited / maxNodes) * 100}"></span>
+        </div>
+        <span>${item.nodes_visited}</span>
+      </div>
+    `).join("");
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    function animateCount(element) {
+      const target = Number(element.dataset.target || "0");
+      if (reduceMotion) {
+        element.textContent = target;
+        return;
+      }
+      let start = null;
+      const duration = 1000;
+      function tick(timestamp) {
+        start ??= timestamp;
+        const progress = Math.min((timestamp - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        element.textContent = Math.round(target * eased);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    document.querySelectorAll(".count").forEach(animateCount);
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("visible");
+        entry.target.querySelectorAll(".bar-fill").forEach((bar) => {
+          bar.style.width = `${bar.dataset.width}%`;
+        });
+      });
+    }, { threshold: .16 });
+
+    document.querySelectorAll(".reveal, .metric, .bars").forEach((item) => observer.observe(item));
+  </script>
+</body>
+</html>
